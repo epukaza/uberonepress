@@ -83,7 +83,7 @@ function check_callback()
       doneifttt = 1
       debug_message("ifttt")
       http.get(
-              'https://maker.ifttt.com/trigger/uberonepress/with/key/b5PXJwPI4IPGPVMkZ3QxgT',
+              'https://maker.ifttt.com/trigger/uberonepress/with/key/dZCo3nix62VtXlQzI-t855orNhsOt6qf_muXO-g1OA5',
               nil,
               function(code, data)
                 debug_message('ifttt status code: ' .. (code or 'nil'))
