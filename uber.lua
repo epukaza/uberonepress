@@ -41,7 +41,7 @@ function get_status()
   return http_code, request_id, status, error_code
 end
 
-function check_request_status(token)
+function check_request_status(token, callback)
   if (request_id and token) then
     local url = base_url.."v1/requests/"..request_id
     local headers = "Authorization: Bearer "..token.."\r\n"
@@ -56,6 +56,9 @@ function check_request_status(token)
         request_id = table['request_id']
         if table['errors'] then
           error_code = table['errors']['code']
+        end
+        if(callback) then
+          callback()
         end
       end
     end)

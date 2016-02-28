@@ -6,7 +6,7 @@ local ssid = "volcano"
 local pwd = "abhinav sinha"
 local srv = nil
 local button_pin = 6
-local led_pin = 4
+local led_pin = 7
 local pwm_timer = 1
 local pwm_max_bright = 255
 local pwm_delay = 16
@@ -132,6 +132,7 @@ function on_start()
   led_fade_in(colors.WHITE)
 
   debug_message('on_start: connecting to AP')
+  wifi.setmode(wifi.STATION)
   wifi.sta.config(ssid, pwd)
 end
 
