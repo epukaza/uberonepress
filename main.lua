@@ -4,7 +4,6 @@ uber = require('uber')
 
 local ssid = "volcano"
 local pwd = "abhinav sinha"
-local srv = nil
 local button_pin = 6
 local led_pin = 7
 local pwm_timer = 1
@@ -13,11 +12,11 @@ local pwm_delay = 16
 local request_check_timer = 4
 local manual_update_timer = 3
 token = nil
-lat = "37.775393"
-long = "-122.417546"
+--location is fort mason center
+lat = "37.806010"
+long = "-122.431846"
 request_id = nil
 ride_status = nil
-
 
 colors = {
   OFF = 1,
@@ -35,19 +34,37 @@ color_grb_values = {
   {255,0,0},
 }
 
+function do_manual_update(req_id)
+  --after 10 seconds, change the ride status to 'accepted'
+  --then 'arriving'
+  --then 'in_progress'
+  --then 'completed'
+  tmr.alarm(manual_update_timer, 10*1000, tmr.ALARM_SINGLE, 
+    function()
+      collectgarbage()
+      uber.set_ride_status(token, req_id, 'accepted')
+      tmr.alarm(manual_update_timer, 10*1000, tmr.ALARM_SINGLE, 
+        function()
+          collectgarbage()
+          uber.set_ride_status(token, req_id, 'completed')
+        end)
+    end)
+end
+
 function request_callback()
   _, request_id, ride_status = uber.get_status()
-
+  collectgarbage()
   tmr.alarm(request_check_timer, 1000, tmr.ALARM_SINGLE, 
     function()
       uber.check_request_status(token, check_callback)
-
+      do_manual_update(request_id)
     end)
 end
 
 function check_callback()
   _, request_id, ride_status = uber.get_status()
-  print(ride_status)
+  collectgarbage()
+  debug_message("current ride status is: "..ride_status)
   if(ride_status == "processing")then
     --check again in 5 seconds
     tmr.alarm(request_check_timer, 5000, tmr.ALARM_SINGLE, 
@@ -76,6 +93,7 @@ function check_callback()
 end
 
 function call_uber()
+  debug_message("call_uber")
   led_fade_to(colors.WHITE, colors.YELLOW)
   uber.request_ride(token, lat, long, request_callback)
 end
@@ -91,38 +109,6 @@ function debounce (func, ...)
         last = now
         return func(...)
     end
-end
-
-function start_server()
-  debug_message('server start')
-  debug_message(srv)
-
-  if srv then
-    srv = nil
-  end
-  srv = net.createServer(net.TCP, 30)
-  srv:listen(80, connect)
-  debug_message(srv)
-end
-
-function stop_server()
-  debug_message('server stop')
-  debug_message(srv)
-  if srv then
-    srv:close()
-    srv = nil
-  end
-  debug_message(srv)
-end
-
-function connect(sock)
-  sock:on('receive', function(sck, payload)
-    conn:send('HTTP/1.1 200 OK\r\n\r\n' .. 'Hello world')
-  end)
-
-  sock:on('send', function(sck)
-    sck:close()
-  end)
 end
 
 function on_start()
@@ -217,6 +203,5 @@ function led_fade_to(begin_color, end_color)
 end
 
 on_start()
-start_server()
 gpio.mode(button_pin, gpio.INT, gpio.FLOAT)
 gpio.trig(button_pin, 'up', debounce(call_uber))
