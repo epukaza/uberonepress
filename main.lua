@@ -10,9 +10,13 @@ local pwm_pin = 4
 local pwm_timer = 1
 local pwm_max_bright = 255
 local config = nil -- sensitive data loaded at runtime
-local token = nil
-local lat = "37.775393"
-local long = "-122.417546"
+token = nil
+lat = "37.775393"
+long = "-122.417546"
+request_id = nil
+-- request_id = "58b26005-43bd-4784-a3d4-7abaad9003d3"
+ride_status = nil
+
 
 local colors = {
   OFF = 1,
@@ -23,6 +27,7 @@ local colors = {
 }
 function call_uber()
   uber.request_ride(token, lat, long)
+  _, request_id, ride_status = uber.get_status()
 end
 
 function debounce (func, ...)
@@ -79,6 +84,7 @@ function on_start()
   file.close()
 
   debug_message('on_start: enable led')
+  ws2812.write(4, string.char(0,0,0))
   ws2812.write(4, string.char(0,0,0))
 
   debug_message('on_start: connecting to AP')

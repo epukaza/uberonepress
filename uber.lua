@@ -32,12 +32,30 @@ function request_ride(token, latitude, longitude)
       end
     end
   end)
+
 end
 
 function get_status()
   return http_code, request_id, status, error_code
 end
 
-function check_request_status(request_id)
-  -- local url = base_url ..
+function check_request_status(token)
+  if (request_id and token) then
+    local url = base_url.."v1/requests/"..request_id
+    local headers = "Authorization: Bearer "..token.."\r\n"
+    http.get(url, headers, function(code, data)
+      if (code < 0) then
+        print("https request failed")
+      else
+        print(code, data)
+        http_code = code
+        table = cjson.decode(data)
+        status = table['status']
+        request_id = table['request_id']
+        if table['errors'] then
+          error_code = table['errors']['code']
+        end
+      end
+    end)
+  end
 end
