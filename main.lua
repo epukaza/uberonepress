@@ -82,14 +82,14 @@ function check_callback()
     if not doneifttt then
       doneifttt = 1
       debug_message("ifttt")
-      -- http.get(
-      --         'https://maker.ifttt.com/trigger/uberonepress/with/key/b5PXJwPI4IPGPVMkZ3QxgT',
-      --         nil,
-      --         function(code, data)
-      --           debug_message('ifttt status code: ' .. (code or 'nil'))
-      --           debug_message('ifttt resp data: ' .. (data or 'nil'))
-      --         end
-      --       )
+      http.get(
+              'https://maker.ifttt.com/trigger/uberonepress/with/key/b5PXJwPI4IPGPVMkZ3QxgT',
+              nil,
+              function(code, data)
+                debug_message('ifttt status code: ' .. (code or 'nil'))
+                debug_message('ifttt resp data: ' .. (data or 'nil'))
+              end
+            )
     end
     check_again()
   elseif (ride_status == "in_progress")
