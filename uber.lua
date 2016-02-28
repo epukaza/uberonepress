@@ -12,7 +12,7 @@ local error_code = nil
 
 local base_url = "https://sandbox-api.uber.com/"
 
-function request_ride(token, latitude, longitude)
+function request_ride(token, latitude, longitude, callback)
   local url = base_url.."v1/requests"
   local headers = "Content-Type: application/json\r\n"..
                   "Authorization: Bearer "..token.."\r\n"
@@ -30,9 +30,11 @@ function request_ride(token, latitude, longitude)
       if table['errors'] then
         error_code = table['errors']['code']
       end
+      if(callback) then
+        callback()
+      end
     end
   end)
-
 end
 
 function get_status()
