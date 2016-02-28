@@ -10,7 +10,8 @@ local led_pin = 7
 local pwm_timer = 1
 local pwm_max_bright = 255
 local pwm_delay = 16
-local refresh_tmr = 4
+local request_check_timer = 4
+local manual_update_timer = 3
 token = nil
 lat = "37.775393"
 long = "-122.417546"
@@ -36,38 +37,42 @@ color_grb_values = {
 
 function request_callback()
   _, request_id, ride_status = uber.get_status()
-  tmr.alarm(refresh_tmr, 5000, tmr.ALARM_AUTO, 
+
+  tmr.alarm(request_check_timer, 1000, tmr.ALARM_SINGLE, 
     function()
-      uber.check_request_status(token)
-      _, request_id, ride_status = uber.get_status()
-      print(ride_status)
-      if(ride_status == "processing")then
-        --do nothing
-      elseif(ride_status == "accepted")
-        or (ride_status == "arriving")
-        or (ride_status == "in_progress")
-        or (ride_status == "completed")then
-        --pulse led green then turn off after 1 minute (20 seconds in dev/demo)
-        led_fade_to(colors.YELLOW, colors.GREEN)
-        tmr.stop(refresh_tmr)
-        tmr.unregister(refresh_tmr)
-        tmr.alarm(refresh_tmr, 20*1000, tmr.ALARM_SINGLE, function()
-          led_fade_out(colors.GREEN)
-          end)
-      elseif(ride_status == "driver_canceled")
-        or (ride_status == "no_drivers_available")
-        or (ride_status == "rider_canceled")then
-        --pulse led red then turn off after 1 minute (20 seconds in dev/demo)
-        led_fade_to(colors.YELLOW, colors.RED)
-        tmr.stop(refresh_tmr)
-        tmr.unregister(refresh_tmr)
-        tmr.alarm(refresh_tmr, 20*1000, tmr.ALARM_SINGLE, function()
-          led_fade_out(colors.RED)
-          end)
-        tmr.unregister(refresh_tmr)
-      end
-    end
-  )
+      uber.check_request_status(token, check_callback)
+
+    end)
+end
+
+function check_callback()
+  _, request_id, ride_status = uber.get_status()
+  print(ride_status)
+  if(ride_status == "processing")then
+    --check again in 5 seconds
+    tmr.alarm(request_check_timer, 5000, tmr.ALARM_SINGLE, 
+    function()
+      uber.check_request_status(token, check_callback)
+    end)
+  elseif(ride_status == "accepted")
+    or (ride_status == "arriving")
+    or (ride_status == "in_progress")
+    or (ride_status == "completed")then
+    --pulse led green then turn off after 1 minute (20 seconds in dev/demo)
+    led_fade_to(colors.YELLOW, colors.GREEN)
+    tmr.alarm(request_check_timer, 20*1000, tmr.ALARM_SINGLE, function()
+      led_fade_out(colors.GREEN)
+      end)
+  elseif(ride_status == "driver_canceled")
+    or (ride_status == "no_drivers_available")
+    or (ride_status == "rider_canceled")then
+    --pulse led red then turn off after 1 minute (20 seconds in dev/demo)
+    led_fade_to(colors.YELLOW, colors.RED)
+    tmr.alarm(request_check_timer, 20*1000, tmr.ALARM_SINGLE, function()
+      led_fade_out(colors.RED)
+      end)
+    tmr.unregister(request_check_timer)
+  end
 end
 
 function call_uber()
