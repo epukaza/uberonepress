@@ -2,7 +2,6 @@ local debug_message = debug_message
 local http = http
 local cjson = cjson
 local debug_message = debug_message
-
 module(...)
 
 local http_code = nil
@@ -15,7 +14,6 @@ local base_url = "https://sandbox-api.uber.com/"
 local http_busy = 0
 
 function request_ride(token, latitude, longitude, callback)
-  
   debug_message("uber.request_ride")
   local url = base_url.."v1/requests"
   local headers = "Content-Type: application/json\r\n"..
@@ -52,7 +50,7 @@ end
 function check_request_status(token, callback)
   debug_message("uber.check_request_status")
   if (request_id and token) then
-    debug_message("token and request not nil")
+    -- debug_message("token and request not nil")
     local url = base_url.."v1/requests/"..request_id
     local headers = "Authorization: Bearer "..token.."\r\n"
     -- debug_message("url: "..url)
@@ -88,8 +86,8 @@ function set_ride_status(token, req_id, status)
     local headers = "Authorization: Bearer "..token.."\r\n"
                     .."Content-Type: application/json\r\n"
     local body = '{"status":"'..status..'"}'
-    debug_message("setting request with id: "..req_id.."\n".."to status: "..status.."\n")
-    debug_message("packet body:" ..body)
+    -- debug_message("setting request with id: "..req_id.."\n".."to status: "..status.."\n")
+    -- debug_message("packet body:" ..body)
     while http_busy==1 do
     end
     http_busy = 1

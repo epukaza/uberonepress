@@ -2,12 +2,9 @@ print("starting main.lua")
 
 uber = require('uber')
 
-local ssid = "volcano"
-local pwd = "abhinav sinha"
 local button_pin = 6
 local led_pin = 7
 local pwm_timer = 1
-local pwm_max_bright = 255
 local pwm_delay = 16
 local request_check_timer = 4
 local manual_update_timer = 3
@@ -39,23 +36,24 @@ function do_manual_update(req_id)
   --then 'arriving'
   --then 'in_progress'
   --then 'completed'
-  tmr.alarm(manual_update_timer, 10*1000, tmr.ALARM_SINGLE, 
+  local count = 1
+  local status = {'accepted','arriving','in_progress','completed'}
+  tmr.alarm(manual_update_timer, 10*1000, tmr.ALARM_AUTO, 
     function()
       collectgarbage()
-      uber.set_ride_status(token, req_id, 'accepted')
-      tmr.alarm(manual_update_timer, 10*1000, tmr.ALARM_SINGLE, 
-        function()
-          collectgarbage()
-          uber.set_ride_status(token, req_id, 'completed')
-        end)
+      uber.set_ride_status(token, req_id, status[count])
+      count = count+1
+      if (count == 5) then
+        tmr.unregister(manual_update_timer)
+      end
     end)
 end
 
 function request_callback()
   _, request_id, ride_status = uber.get_status()
-  collectgarbage()
   tmr.alarm(request_check_timer, 1000, tmr.ALARM_SINGLE, 
     function()
+      collectgarbage()
       uber.check_request_status(token, check_callback)
       do_manual_update(request_id)
     end)
@@ -63,12 +61,12 @@ end
 
 function check_callback()
   _, request_id, ride_status = uber.get_status()
-  collectgarbage()
   debug_message("current ride status is: "..ride_status)
   if(ride_status == "processing")then
     --check again in 5 seconds
     tmr.alarm(request_check_timer, 5000, tmr.ALARM_SINGLE, 
     function()
+      collectgarbage()
       uber.check_request_status(token, check_callback)
     end)
   elseif(ride_status == "accepted")
@@ -77,6 +75,15 @@ function check_callback()
     or (ride_status == "completed")then
     --pulse led green then turn off after 1 minute (20 seconds in dev/demo)
     led_fade_to(colors.YELLOW, colors.GREEN)
+    debug_message("ifttt")
+    -- http.get(
+    --         'https://maker.ifttt.com/trigger/uberonepress/with/key/b5PXJwPI4IPGPVMkZ3QxgT',
+    --         nil,
+    --         function(code, data)
+    --           debug_message('ifttt status code: ' .. (code or 'nil'))
+    --           debug_message('ifttt resp data: ' .. (data or 'nil'))
+    --         end
+    --       )
     tmr.alarm(request_check_timer, 20*1000, tmr.ALARM_SINGLE, function()
       led_fade_out(colors.GREEN)
       end)
@@ -112,19 +119,12 @@ function debounce (func, ...)
 end
 
 function on_start()
-  debug_message('on_start')
-
-  debug_message('on_start: reading request token')
   file.open('access_token_request.txt')
   token = file.read()
   file.close()
-
-  debug_message('on_start: enable led')
   led_fade_in(colors.WHITE)
-
-  debug_message('on_start: connecting to AP')
   wifi.setmode(wifi.STATION)
-  wifi.sta.config(ssid, pwd)
+  wifi.sta.config("volcano", 'abhinav sinha')
 end
 
 function led_fade_in(color, callback, color2)
