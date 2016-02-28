@@ -9,17 +9,16 @@ local button_pin = 6
 local led_pin = 4
 local pwm_timer = 1
 local pwm_max_bright = 255
-local config = nil -- sensitive data loaded at runtime
+local pwm_delay = 16
 local refresh_tmr = 4
 token = nil
 lat = "37.775393"
 long = "-122.417546"
 request_id = nil
--- request_id = "58b26005-43bd-4784-a3d4-7abaad9003d3"
 ride_status = nil
 
 
-local colors = {
+colors = {
   OFF = 1,
   WHITE = 2,
   YELLOW = 3,
@@ -27,7 +26,7 @@ local colors = {
   GREEN = 5,
 }
 
-local color_grb_values = {
+color_grb_values = {
   {0,0,0},
   {255,255,255},
   {200,180,0},
@@ -37,16 +36,42 @@ local color_grb_values = {
 
 function request_callback()
   _, request_id, ride_status = uber.get_status()
-  -- tmr.alarm(refresh_tmr, 1000, tmr.ALARM_AUTO, 
-  --   function()
-  --     if(ride_status == "processing") then
-  --     end
-  --   end
-  -- )
+  tmr.alarm(refresh_tmr, 5000, tmr.ALARM_AUTO, 
+    function()
+      uber.check_request_status(token)
+      _, request_id, ride_status = uber.get_status()
+      print(ride_status)
+      if(ride_status == "processing")then
+        --do nothing
+      elseif(ride_status == "accepted")
+        or (ride_status == "arriving")
+        or (ride_status == "in_progress")
+        or (ride_status == "completed")then
+        --pulse led green then turn off after 1 minute (20 seconds in dev/demo)
+        led_fade_to(colors.YELLOW, colors.GREEN)
+        tmr.stop(refresh_tmr)
+        tmr.unregister(refresh_tmr)
+        tmr.alarm(refresh_tmr, 20*1000, tmr.ALARM_SINGLE, function()
+          led_fade_out(colors.GREEN)
+          end)
+      elseif(ride_status == "driver_canceled")
+        or (ride_status == "no_drivers_available")
+        or (ride_status == "rider_canceled")then
+        --pulse led red then turn off after 1 minute (20 seconds in dev/demo)
+        led_fade_to(colors.YELLOW, colors.RED)
+        tmr.stop(refresh_tmr)
+        tmr.unregister(refresh_tmr)
+        tmr.alarm(refresh_tmr, 20*1000, tmr.ALARM_SINGLE, function()
+          led_fade_out(colors.RED)
+          end)
+        tmr.unregister(refresh_tmr)
+      end
+    end
+  )
 end
 
 function call_uber()
-  led_fade_in(colors.YELLOW)
+  led_fade_to(colors.WHITE, colors.YELLOW)
   uber.request_ride(token, lat, long, request_callback)
 end
 
@@ -110,7 +135,7 @@ function on_start()
   wifi.sta.config(ssid, pwd)
 end
 
-function led_fade_in(color)
+function led_fade_in(color, callback, color2)
   --fade in color from black
   grb_limits = color_grb_values[color]
   g_lim = grb_limits[1]
@@ -118,7 +143,7 @@ function led_fade_in(color)
   b_lim = grb_limits[3]
   g_cur, r_cur, b_cur = 0,0,0
 
-  tmr.alarm(pwm_timer, 16, tmr.ALARM_AUTO,
+  tmr.alarm(pwm_timer, pwm_delay, tmr.ALARM_AUTO,
     function()
       local done = 0
       g_cur = g_cur + 1
@@ -139,17 +164,50 @@ function led_fade_in(color)
       ws2812.write(led_pin, string.char(g_cur, r_cur, b_cur))
       if done == 3 then
         tmr.unregister(pwm_timer)
+        pwm_delay = 4
+        if callback then
+          callback(color2)
+        end
       end
     end)
 end
 
-function led_fade_out(color)
-  led_fade_to(color, colors.OFF)
+function led_fade_out(color, callback, color2)
+  --fade out color to black
+  grb_limits = color_grb_values[color]
+  g_lim, r_lim, b_lim = 0,0,0
+  g_cur, r_cur, b_cur = grb_limits[1],grb_limits[2],grb_limits[3]
+
+  tmr.alarm(pwm_timer, pwm_delay, tmr.ALARM_AUTO,
+    function()
+      local done = 0
+      g_cur = g_cur - 1
+      r_cur = r_cur - 1
+      b_cur = b_cur - 1
+      if g_cur < g_lim then
+        g_cur = g_lim
+        done = done + 1
+      end
+      if r_cur < r_lim then
+        r_cur = r_lim
+        done = done + 1
+      end
+      if b_cur < b_lim then
+        b_cur = b_lim
+        done = done + 1
+      end
+      ws2812.write(led_pin, string.char(g_cur, r_cur, b_cur))
+      if done == 3 then
+        tmr.unregister(pwm_timer)
+        if callback then
+          callback(color2)
+        end
+      end
+    end)
 end
 
 function led_fade_to(begin_color, end_color)
-  grb_values = color_grb_values[end_color]
-  ws2812.write(led_pin, string.char(grb_values[1], grb_values[2], grb_values[3]))
+  led_fade_out(begin_color, led_fade_in, end_color)
 end
 
 on_start()
