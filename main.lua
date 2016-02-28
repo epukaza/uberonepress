@@ -1,35 +1,100 @@
-print("this is main.lua")
+print("starting main.lua")
 
+uber = require('uber')
 
-function test_uber()
-  local url = "https://sandbox-api.uber.com/v1/requests"
-  local headers = "Content-Type: application/json\r\n"..
-                  "Authorization: Bearer eyJhbGciOiJSUzI1N"..
-                  "iIsInR5cCI6IkpXVCJ9.eyJzY29wZXMiOlsicmVx"..
-                  "dWVzdCJdLCJzdWIiOiI0NjFjN2U3Yy1kYjc2LTQ3Y"..
-                  "jktOTVlYy0xZTMzZDNmOTQ0MWEiLCJpc3MiOiJ1Ym"..
-                  "VyLXVzMSIsImp0aSI6ImEzNzY2Mzc0LTNiNzgtNDl"..
-                  "jZC04Y2ZiLWFiZjM1NDFhOTc1MSIsImV4cCI6MTQ1"..
-                  "OTE1Mzc2NiwiaWF0IjoxNDU2NTYxNzY2LCJ1YWN0I"..
-                  "joiMUVUVmVvVzlBU0h5UmwwTVFvRXdWQmtDWnl2a1"..
-                  "N6IiwibmJmIjoxNDU2NTYxNjc2LCJhdWQiOiJtX0J"..
-                  "0U2czbjJLem45MzlPa3VkRXcxQXlYOHV6X1ZaQyJ9"..
-                  ".SM-D6KovxJtwPgxNxXSAUNUfPLDEGQAmRvZTvNDg"..
-                  "_REXxmDbuH_B31-wl_9yMz1rU7Ya-9ukw9yWv7PHM"..
-                  "GvwJkWvtRKMPF9MEwU1_be2DrJrs77DwyuOXh0ZBm"..
-                  "hu1wCoZQqU3wZ0anchiZFspvcoaoHUWdVAj1sbyrH"..
-                  "E-vy8lIJWY_N1L_znXU53PeGQkZ5q5Mo6Bgjy0qHN"..
-                  "VXCy-lacfKrRbQVkWUc7SH8-bDKsKAKfgq7LI-uSK"..
-                  "3KWK1jvsJbCN4H7UmzRUbQ9mypoih2aF4uAYQHvjG"..
-                  "9CdQkT6RwEbVfa75ik569QczyviyMYE2X-col7IPL"..
-                  "1lkLoRta0UAHWpA\r\n"
-  local body = '{"start_latitude": 37.775393,"start_longitude": -122.417546}'
+local ssid = "volcano"
+local pwd = "abhinav sinha"
+local srv = nil
+local button_pin = 6
+local pwm_pin = 4
+local pwm_timer = 1
+local pwm_max_bright = 255
+local config = nil -- sensitive data loaded at runtime
+local token = nil
+local lat = "37.775393"
+local long = "-122.417546"
 
-  http.post(url, headers, body, function(code, data)
-    if (code < 0) then
-      print("https request failed")
-    else
-      print(code, data)
+local colors = {
+  OFF = 1,
+  WHITE = 2,
+  YELLOW = 3,
+  RED = 4,
+  GREEN = 5,
+}
+function call_uber()
+  uber.request_ride(token, lat, long)
+end
+
+function debounce (func, ...)
+    local last = 0
+    local delay = 200000
+
+    return function (...)
+        local now = tmr.now()
+        if now - last < delay then return end
+
+        last = now
+        return func(...)
     end
+end
+
+function start_server()
+  debug_message('server start')
+  debug_message(srv)
+
+  if srv then
+    srv = nil
+  end
+  srv = net.createServer(net.TCP, 30)
+  srv:listen(80, connect)
+  debug_message(srv)
+end
+
+function stop_server()
+  debug_message('server stop')
+  debug_message(srv)
+  if srv then
+    srv:close()
+    srv = nil
+  end
+  debug_message(srv)
+end
+
+function connect(sock)
+  sock:on('receive', function(sck, payload)
+    conn:send('HTTP/1.1 200 OK\r\n\r\n' .. 'Hello world')
+  end)
+
+  sock:on('send', function(sck)
+    sck:close()
   end)
 end
+
+function on_start()
+  debug_message('on_start')
+
+  debug_message('on_start: reading request token')
+  file.open('access_token_request.txt')
+  token = file.read()
+  file.close()
+
+  debug_message('on_start: enable led')
+  ws2812.write(4, string.char(0,0,0))
+
+  debug_message('on_start: connecting to AP')
+  wifi.sta.config(ssid, pwd)
+end
+
+function led_fade_in(color)
+end
+
+function led_fade_out(color)
+end
+
+function led_fade_to(begin_color, end_color)
+end
+
+on_start()
+start_server()
+gpio.mode(button_pin, gpio.INT, gpio.FLOAT)
+gpio.trig(button_pin, 'down', debounce(call_uber))
