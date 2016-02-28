@@ -36,7 +36,7 @@ function do_manual_update()
   --then 'completed'
   local count = 1
   local status = {'accepted','arriving','in_progress','completed'}
-  tmr.alarm(manual_update_timer, 13*1000, tmr.ALARM_AUTO, 
+  tmr.alarm(manual_update_timer, 10*1000, tmr.ALARM_AUTO, 
     function()
       collectgarbage()
       uber.set_ride_status(status[count])
@@ -59,7 +59,7 @@ function request_callback()
 end
 
 function check_again()
-  tmr.alarm(request_check_timer, 8000, tmr.ALARM_SINGLE, 
+  tmr.alarm(request_check_timer, 5000, tmr.ALARM_SINGLE, 
     function()
       collectgarbage()
       uber.check_request_status(check_callback)
